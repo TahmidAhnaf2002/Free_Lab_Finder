@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Lab Finder — BRACU CSE</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c0e;
+    --surface: #0e1518;
+    --border: #1e2d32;
+    --green: #00ff88;
+    --green-dim: #00c86a;
+    --green-faint: rgba(0,255,136,0.06);
+    --red: #ff3b5c;
+    --yellow: #ffd600;
+    --text: #c8dde4;
+    --muted: #4a6570;
+    --card: #111a1e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Grid background */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* HEADER */
+  header {
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .header-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    letter-spacing: -1px;
+  }
+
+  h1 span {
+    color: var(--green);
+    text-shadow: 0 0 30px rgba(0,255,136,0.5);
+  }
+
+  .header-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 14px;
+    letter-spacing: 1px;
+  }
+
+  .pulse-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* CONTROLS */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  @media (max-width: 600px) {
+    .controls { grid-template-columns: 1fr; }
+  }
+
+  .control-group label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    padding: 9px 18px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--green-faint);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .btn:hover {
+    border-color: var(--green-dim);
+    color: var(--green);
+  }
+
+  .btn:hover::before { opacity: 1; }
+
+  .btn.active {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0,255,136,0.1);
+    box-shadow: 0 0 12px rgba(0,255,136,0.2), inset 0 0 12px rgba(0,255,136,0.05);
+  }
+
+  .time-btn {
+    flex: 1;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  .time-label {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .time-sub {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  /* SEARCH ACTION */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+
+  .search-btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 14px 36px;
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .search-btn:hover {
+    background: #fff;
+    box-shadow: 0 0 24px rgba(0,255,136,0.4);
+  }
+
+  .search-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .status-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* RESULTS */
+  .results-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+
+  .results-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .results-count {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--green);
+    text-shadow: 0 0 20px rgba(0,255,136,0.4);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .floor-section {
+    margin-bottom: 36px;
+  }
+
+  .floor-header {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--yellow);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .floor-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,214,0,0.3), transparent);
+  }
+
+  .room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .room-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.3s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .room-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--green), transparent);
+  }
+
+  .room-card:hover {
+    border-color: var(--green-dim);
+    background: rgba(0,255,136,0.05);
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+  }
+
+  .room-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    color: #fff;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .room-floor {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .room-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--green);
+    margin-top: 8px;
+    letter-spacing: 1px;
+  }
+
+  .room-status-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .empty-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--border);
+    letter-spacing: 1px;
+  }
+
+  /* INITIAL STATE */
+  .initial-state {
+    text-align: center;
+    padding: 80px 20px;
+  }
+
+  .initial-icon {
+    font-size: 56px;
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .initial-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .initial-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--border);
+    letter-spacing: 1px;
+  }
+
+  /* Summary strip */
+  .summary-strip {
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 6px;
+    padding: 14px 20px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .summary-strip .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 3px;
+  }
+
+  .tag-day {
+    background: rgba(255,214,0,0.15);
+    color: var(--yellow);
+    border: 1px solid rgba(255,214,0,0.3);
+  }
+
+  .tag-time {
+    background: rgba(0,255,136,0.1);
+    color: var(--green);
+    border: 1px solid rgba(0,255,136,0.3);
+  }
+
+  .tag-count {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="header-tag"><span class="pulse-dot"></span>BRACU CSE — SPRING 2026</div>
+    <h1>Free <span>Lab</span> Finder</h1>
+    <div class="header-sub">// REAL-TIME AVAILABILITY FROM ROUTINE v1.0 &nbsp;|&nbsp; SELECT DAY + TIME TO SCAN</div>
+  </header>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>// Day</label>
+      <div class="btn-group" id="dayBtns">
+        <button class="btn" data-day="SAT">SAT</button>
+        <button class="btn" data-day="SUN">SUN</button>
+        <button class="btn" data-day="MON">MON</button>
+        <button class="btn" data-day="TUE">TUE</button>
+        <button class="btn" data-day="WED">WED</button>
+        <button class="btn" data-day="THU">THU</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>// Time Slot</label>
+      <div class="btn-group" id="timeBtns">
+        <button class="btn time-btn" data-time="8:00 AM">
+          <span class="time-label">8 AM</span>
+          <span class="time-sub">8:00 – 11:00</span>
+        </button>
+        <button class="btn time-btn" data-time="11:00 AM">
+          <span class="time-label">11 AM</span>
+          <span class="time-sub">11:00 – 2:00</span>
+        </button>
+        <button class="btn time-btn" data-time="2:00 PM">
+          <span class="time-label">2 PM</span>
+          <span class="time-sub">2:00 – 5:00</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <button class="search-btn" id="searchBtn" disabled>SCAN LABS</button>
+    <div class="status-text" id="statusText">SELECT DAY AND TIME SLOT ABOVE</div>
+  </div>
+
+  <div id="output">
+    <div class="initial-state">
+      <div class="initial-icon">🔬</div>
+      <div class="initial-title">Ready to scan available labs</div>
+      <div class="initial-sub">// PICK A DAY AND TIME SLOT, THEN HIT SCAN LABS</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── SCHEDULE DATA ───────────────────────────────────────────────────────────
+const schedule = [{"course":"CSE101-01","day":"SUN","time":"11:00 AM","room":"FT11-04L"},{"course":"CSE101-02","day":"TUE","time":"11:00 AM","room":"FT11-03L"},{"course":"CSE101-03","day":"THU","time":"2:00 PM","room":"FT11-04L"},{"course":"CSE101-04","day":"MON","time":"2:00 PM","room":"FT11-04L"},{"course":"CSE101-05","day":"WED","time":"11:00 AM","room":"FT11-04L"},{"course":"CSE101-06","day":"SAT","time":"8:00 AM","room":"FT11-03L"},{"course":"CSE103-01","day":"SAT","time":"2:00 PM","room":"11B-20L"},{"course":"CSE110-01","day":"THU","time":"8:00 AM","room":"09B-08L"},{"course":"CSE110-02","day":"WED","time":"8:00 AM","room":"09B-08L"},{"course":"CSE110-03","day":"WED","time":"11:00 AM","room":"09B-08L"},{"course":"CSE110-04","day":"WED","time":"11:00 AM","room":"09B-10L"},{"course":"CSE110-05","day":"THU","time":"11:00 AM","room":"09B-08L"},{"course":"CSE110-06","day":"WED","time":"8:00 AM","room":"09B-09L"},{"course":"CSE110-07","day":"THU","time":"11:00 AM","room":"09B-09L"},{"course":"CSE110-08","day":"WED","time":"11:00 AM","room":"09B-09L"},{"course":"CSE110-09","day":"THU","time":"2:00 PM","room":"09B-08L"},{"course":"CSE110-10","day":"THU","time":"8:00 AM","room":"09B-09L"},{"course":"CSE110-11","day":"THU","time":"2:00 PM","room":"09B-09L"},{"course":"CSE110-12","day":"THU","time":"2:00 PM","room":"09B-10L"},{"course":"CSE110-13","day":"WED","time":"8:00 AM","room":"09B-10L"},{"course":"CSE110-14","day":"WED","time":"2:00 PM","room":"09B-09L"},{"course":"CSE110-15","day":"THU","time":"8:00 AM","room":"09B-11L"},{"course":"CSE110-16","day":"THU","time":"11:00 AM","room":"09B-11L"},{"course":"CSE110-17","day":"THU","time":"11:00 AM","room":"09F-27L"},{"course":"CSE111-01","day":"TUE","time":"11:00 AM","room":"09B-08L"},{"course":"CSE111-02","day":"WED","time":"2:00 PM","room":"12F-32L"},{"course":"CSE111-03","day":"WED","time":"2:00 PM","room":"12D-27L"},{"course":"CSE111-04","day":"THU","time":"11:00 AM","room":"12F-32L"},{"course":"CSE111-05","day":"TUE","time":"8:00 AM","room":"09B-09L"},{"course":"CSE111-06","day":"TUE","time":"11:00 AM","room":"09B-09L"},{"course":"CSE111-07","day":"WED","time":"2:00 PM","room":"09B-11L"},{"course":"CSE111-08","day":"WED","time":"11:00 AM","room":"09B-11L"},{"course":"CSE111-09","day":"TUE","time":"8:00 AM","room":"09B-08L"},{"course":"CSE111-10","day":"WED","time":"8:00 AM","room":"09F-27L"},{"course":"CSE111-11","day":"WED","time":"11:00 AM","room":"09F-27L"},{"course":"CSE111-13","day":"WED","time":"2:00 PM","room":"09E-21L"},{"course":"CSE111-14","day":"WED","time":"8:00 AM","room":"09B-11L"},{"course":"CSE111-15","day":"TUE","time":"8:00 AM","room":"09B-10L"},{"course":"CSE111-16","day":"TUE","time":"11:00 AM","room":"09B-10L"},{"course":"CSE111-17","day":"TUE","time":"2:00 PM","room":"09B-08L"},{"course":"CSE220-01","day":"MON","time":"8:00 AM","room":"09B-08L"},{"course":"CSE220-02","day":"SUN","time":"8:00 AM","room":"09B-09L"},{"course":"CSE220-03","day":"SUN","time":"11:00 AM","room":"09B-09L"},{"course":"CSE220-04","day":"MON","time":"11:00 AM","room":"09B-11L"},{"course":"CSE220-05","day":"MON","time":"2:00 PM","room":"09B-11L"},{"course":"CSE220-06","day":"MON","time":"11:00 AM","room":"09B-08L"},{"course":"CSE220-07","day":"MON","time":"2:00 PM","room":"09B-08L"},{"course":"CSE220-08","day":"SUN","time":"2:00 PM","room":"09B-09L"},{"course":"CSE220-09","day":"SUN","time":"11:00 AM","room":"09B-08L"},{"course":"CSE220-10","day":"SUN","time":"2:00 PM","room":"09B-08L"},{"course":"CSE220-11","day":"SUN","time":"8:00 AM","room":"09B-10L"},{"course":"CSE220-12","day":"SUN","time":"11:00 AM","room":"09B-10L"},{"course":"CSE220-13","day":"SUN","time":"2:00 PM","room":"09B-10L"},{"course":"CSE220-14","day":"SUN","time":"8:00 AM","room":"09B-11L"},{"course":"CSE220-15","day":"SUN","time":"11:00 AM","room":"09B-11L"},{"course":"CSE220-16","day":"MON","time":"2:00 PM","room":"09B-09L"},{"course":"CSE220-17","day":"MON","time":"8:00 AM","room":"09B-10L"},{"course":"CSE220-18","day":"SUN","time":"2:00 PM","room":"09B-11L"},{"course":"CSE220-19","day":"MON","time":"11:00 AM","room":"09B-10L"},{"course":"CSE220-20","day":"MON","time":"2:00 PM","room":"09B-10L"},{"course":"CSE220-21","day":"MON","time":"8:00 AM","room":"09B-11L"},{"course":"CSE220-22","day":"SUN","time":"8:00 AM","room":"09B-08L"},{"course":"CSE221-01","day":"SUN","time":"8:00 AM","room":"09E-21L"},{"course":"CSE221-02","day":"SAT","time":"8:00 AM","room":"09B-08L"},{"course":"CSE221-03","day":"SAT","time":"11:00 AM","room":"09B-08L"},{"course":"CSE221-04","day":"SUN","time":"11:00 AM","room":"09E-21L"},{"course":"CSE221-05","day":"SUN","time":"2:00 PM","room":"09F-24L"},{"course":"CSE221-06","day":"SUN","time":"8:00 AM","room":"09F-25L"},{"course":"CSE221-07","day":"SUN","time":"11:00 AM","room":"09F-25L"},{"course":"CSE221-08","day":"SAT","time":"2:00 PM","room":"09B-08L"},{"course":"CSE221-09","day":"SAT","time":"8:00 AM","room":"09B-09L"},{"course":"CSE221-10","day":"SAT","time":"11:00 AM","room":"09B-09L"},{"course":"CSE221-11","day":"SAT","time":"2:00 PM","room":"09B-09L"},{"course":"CSE221-12","day":"SAT","time":"8:00 AM","room":"09B-10L"},{"course":"CSE221-13","day":"SAT","time":"11:00 AM","room":"09B-10L"},{"course":"CSE221-14","day":"SUN","time":"11:00 AM","room":"09F-24L"},{"course":"CSE221-15","day":"SUN","time":"2:00 PM","room":"09E-21L"},{"course":"CSE221-16","day":"SAT","time":"2:00 PM","room":"09B-10L"},{"course":"CSE221-17","day":"SAT","time":"8:00 AM","room":"09B-11L"},{"course":"CSE221-19","day":"SUN","time":"11:00 AM","room":"09E-22L"},{"course":"CSE221-20","day":"SAT","time":"11:00 AM","room":"09B-11L"},{"course":"CSE221-21","day":"SAT","time":"2:00 PM","room":"09B-11L"},{"course":"CSE221-22","day":"SUN","time":"2:00 PM","room":"09E-22L"},{"course":"CSE221-23","day":"SUN","time":"8:00 AM","room":"09F-24L"},{"course":"CSE250-01A","day":"SAT","time":"2:00 PM","room":"12B-20L"},{"course":"CSE250-01B","day":"SAT","time":"2:00 PM","room":"12B-20L"},{"course":"CSE250-02A","day":"THU","time":"2:00 PM","room":"12B-20L"},{"course":"CSE250-02B","day":"THU","time":"2:00 PM","room":"12B-20L"},{"course":"CSE250-03A","day":"MON","time":"8:00 AM","room":"12B-20L"},{"course":"CSE250-03B","day":"MON","time":"8:00 AM","room":"12B-20L"},{"course":"CSE250-04A","day":"WED","time":"11:00 AM","room":"12B-20L"},{"course":"CSE250-04B","day":"WED","time":"11:00 AM","room":"12B-20L"},{"course":"CSE250-05A","day":"SUN","time":"2:00 PM","room":"FT10-01L"},{"course":"CSE250-06A","day":"SAT","time":"8:00 AM","room":"12B-20L"},{"course":"CSE250-06B","day":"SAT","time":"8:00 AM","room":"12B-20L"},{"course":"CSE250-07A","day":"THU","time":"8:00 AM","room":"12B-20L"},{"course":"CSE250-07B","day":"THU","time":"8:00 AM","room":"12B-20L"},{"course":"CSE250-08A","day":"TUE","time":"11:00 AM","room":"FT10-01L"},{"course":"CSE250-08B","day":"TUE","time":"11:00 AM","room":"FT11-01L"},{"course":"CSE250-09A","day":"SUN","time":"11:00 AM","room":"12B-20L"},{"course":"CSE250-09B","day":"SUN","time":"11:00 AM","room":"12B-20L"},{"course":"CSE250-10B","day":"TUE","time":"8:00 AM","room":"FT10-01L"},{"course":"CSE250-11A","day":"MON","time":"11:00 AM","room":"12B-20L"},{"course":"CSE250-11B","day":"MON","time":"11:00 AM","room":"12B-20L"},{"course":"CSE250-12A","day":"WED","time":"2:00 PM","room":"12B-20L"},{"course":"CSE250-12B","day":"WED","time":"2:00 PM","room":"12B-20L"},{"course":"CSE251-01A","day":"SAT","time":"11:00 AM","room":"12B-20L"},{"course":"CSE251-01B","day":"SAT","time":"11:00 AM","room":"12B-20L"},{"course":"CSE251-02A","day":"THU","time":"8:00 AM","room":"FT10-01L"},{"course":"CSE251-02B","day":"THU","time":"8:00 AM","room":"FT11-01L"},{"course":"CSE251-03A","day":"MON","time":"8:00 AM","room":"FT10-01L"},{"course":"CSE251-03B","day":"MON","time":"8:00 AM","room":"FT11-01L"},{"course":"CSE251-04A","day":"WED","time":"8:00 AM","room":"12B-20L"},{"course":"CSE251-05A","day":"THU","time":"11:00 AM","room":"12B-20L"},{"course":"CSE251-05B","day":"THU","time":"11:00 AM","room":"12B-20L"},{"course":"CSE251-06A","day":"SAT","time":"2:00 PM","room":"FT10-01L"},{"course":"CSE251-06B","day":"SAT","time":"2:00 PM","room":"FT11-01L"},{"course":"CSE251-07A","day":"SUN","time":"8:00 AM","room":"12B-20L"},{"course":"CSE251-07B","day":"SUN","time":"8:00 AM","room":"12B-20L"},{"course":"CSE251-08A","day":"TUE","time":"11:00 AM","room":"12B-20L"},{"course":"CSE251-08B","day":"TUE","time":"11:00 AM","room":"12B-20L"},{"course":"CSE251-09A","day":"SUN","time":"11:00 AM","room":"FT10-01L"},{"course":"CSE251-09B","day":"SUN","time":"11:00 AM","room":"FT11-01L"},{"course":"CSE251-10A","day":"TUE","time":"2:00 PM","room":"FT10-01L"},{"course":"CSE251-10B","day":"TUE","time":"2:00 PM","room":"FT11-01L"},{"course":"CSE251-11A","day":"MON","time":"2:00 PM","room":"FT10-01L"},{"course":"CSE251-11B","day":"MON","time":"2:00 PM","room":"FT11-01L"},{"course":"CSE260-01A","day":"THU","time":"8:00 AM","room":"FT10-04L"},{"course":"CSE260-01B","day":"THU","time":"8:00 AM","room":"FT10-03L"},{"course":"CSE260-02A","day":"THU","time":"11:00 AM","room":"FT10-03L"},{"course":"CSE260-02B","day":"THU","time":"11:00 AM","room":"FT10-04L"},{"course":"CSE260-03A","day":"WED","time":"8:00 AM","room":"FT10-04L"},{"course":"CSE260-03B","day":"WED","time":"8:00 AM","room":"FT11-01L"},{"course":"CSE260-04A","day":"WED","time":"11:00 AM","room":"FT10-04L"},{"course":"CSE260-04B","day":"WED","time":"2:00 PM","room":"FT10-04L"},{"course":"CSE260-05A","day":"THU","time":"2:00 PM","room":"FT10-03L"},{"course":"CSE260-05B","day":"THU","time":"2:00 PM","room":"FT10-04L"},{"course":"CSE260-06A","day":"THU","time":"8:00 AM","room":"FT10-02L"},{"course":"CSE260-06B","day":"SAT","time":"8:00 AM","room":"FT10-03L"},{"course":"CSE260-07A","day":"THU","time":"11:00 AM","room":"FT10-02L"},{"course":"CSE260-07B","day":"THU","time":"2:00 PM","room":"FT10-02L"},{"course":"CSE260-08A","day":"WED","time":"2:00 PM","room":"FT10-02L"},{"course":"CSE260-08B","day":"WED","time":"2:00 PM","room":"FT10-03L"},{"course":"CSE260-09A","day":"WED","time":"8:00 AM","room":"FT10-02L"},{"course":"CSE260-09B","day":"WED","time":"8:00 AM","room":"FT10-03L"},{"course":"CSE260-10A","day":"WED","time":"11:00 AM","room":"FT10-02L"},{"course":"CSE260-10B","day":"WED","time":"11:00 AM","room":"FT10-03L"},{"course":"CSE260-11A","day":"TUE","time":"8:00 AM","room":"FT10-04L"},{"course":"CSE260-11B","day":"MON","time":"2:00 PM","room":"FT10-04L"},{"course":"CSE260-12A","day":"TUE","time":"11:00 AM","room":"FT10-04L"},{"course":"CSE260-12B","day":"TUE","time":"2:00 PM","room":"FT10-04L"},{"course":"CSE260-13A","day":"TUE","time":"2:00 PM","room":"FT10-02L"},{"course":"CSE260-13B","day":"TUE","time":"2:00 PM","room":"FT10-03L"},{"course":"CSE260-15A","day":"SAT","time":"2:00 PM","room":"FT10-02L"},{"course":"CSE260-15B","day":"SAT","time":"2:00 PM","room":"FT10-03L"},{"course":"CSE260-16A","day":"SAT","time":"8:00 AM","room":"FT10-02L"},{"course":"CSE260-16B","day":"SUN","time":"2:00 PM","room":"FT10-04L"},{"course":"CSE260-17A","day":"MON","time":"2:00 PM","room":"FT10-02L"},{"course":"CSE260-17B","day":"MON","time":"2:00 PM","room":"FT10-03L"},{"course":"CSE260-18A","day":"MON","time":"8:00 AM","room":"FT10-02L"},{"course":"CSE260-18B","day":"MON","time":"8:00 AM","room":"FT10-03L"},{"course":"CSE260-19A","day":"MON","time":"11:00 AM","room":"FT10-02L"},{"course":"CSE260-19B","day":"MON","time":"11:00 AM","room":"FT10-03L"},{"course":"CSE260-20A","day":"SAT","time":"8:00 AM","room":"FT10-04L"},{"course":"CSE260-20B","day":"SAT","time":"2:00 PM","room":"FT10-04L"},{"course":"CSE260-21A","day":"TUE","time":"11:00 AM","room":"FT10-02L"},{"course":"CSE260-21B","day":"TUE","time":"11:00 AM","room":"FT10-03L"},{"course":"CSE260-22A","day":"SAT","time":"11:00 AM","room":"FT10-04L"},{"course":"CSE260-22B","day":"SAT","time":"11:00 AM","room":"FT11-01L"},{"course":"CSE260-23A","day":"MON","time":"8:00 AM","room":"FT10-04L"},{"course":"CSE260-23B","day":"MON","time":"11:00 AM","room":"FT10-04L"},{"course":"CSE260-24A","day":"SAT","time":"11:00 AM","room":"FT10-02L"},{"course":"CSE260-24B","day":"SAT","time":"11:00 AM","room":"FT10-03L"},{"course":"CSE260-25A","day":"SUN","time":"8:00 AM","room":"FT10-04L"},{"course":"CSE260-25B","day":"SUN","time":"11:00 AM","room":"FT10-04L"},{"course":"CSE260-26A","day":"SUN","time":"11:00 AM","room":"FT10-02L"},{"course":"CSE260-26B","day":"SUN","time":"11:00 AM","room":"FT10-03L"},{"course":"CSE260-27A","day":"SUN","time":"2:00 PM","room":"FT10-02L"},{"course":"CSE260-27B","day":"SUN","time":"2:00 PM","room":"FT10-03L"},{"course":"CSE321-01","day":"TUE","time":"2:00 PM","room":"12D-26L"},{"course":"CSE321-02","day":"SUN","time":"2:00 PM","room":"12D-27L"},{"course":"CSE321-03","day":"SUN","time":"8:00 AM","room":"12D-26L"},{"course":"CSE321-04","day":"SAT","time":"2:00 PM","room":"12D-26L"},{"course":"CSE321-05","day":"SAT","time":"8:00 AM","room":"12D-27L"},{"course":"CSE321-06","day":"SAT","time":"11:00 AM","room":"12D-27L"},{"course":"CSE321-07","day":"MON","time":"11:00 AM","room":"12D-27L"},{"course":"CSE321-08","day":"WED","time":"11:00 AM","room":"12D-26L"},{"course":"CSE321-09","day":"SUN","time":"8:00 AM","room":"12D-27L"},{"course":"CSE321-10","day":"WED","time":"8:00 AM","room":"12D-26L"},{"course":"CSE321-11","day":"MON","time":"8:00 AM","room":"10G-33L"},{"course":"CSE321-12","day":"WED","time":"2:00 PM","room":"12D-26L"},{"course":"CSE321-13","day":"WED","time":"11:00 AM","room":"12D-27L"},{"course":"CSE321-14","day":"SUN","time":"11:00 AM","room":"12D-27L"},{"course":"CSE321-15","day":"MON","time":"8:00 AM","room":"12D-27L"},{"course":"CSE321-16","day":"MON","time":"2:00 PM","room":"12D-27L"},{"course":"CSE321-17","day":"TUE","time":"8:00 AM","room":"12D-27L"},{"course":"CSE321-18","day":"TUE","time":"8:00 AM","room":"12D-26L"},{"course":"CSE321-19","day":"TUE","time":"11:00 AM","room":"12D-26L"},{"course":"CSE321-20","day":"THU","time":"8:00 AM","room":"10G-34L"},{"course":"CSE321-21","day":"THU","time":"11:00 AM","room":"10G-34L"},{"course":"CSE321-22","day":"THU","time":"2:00 PM","room":"10G-34L"},{"course":"CSE321-23","day":"THU","time":"8:00 AM","room":"12D-26L"},{"course":"CSE321-24","day":"THU","time":"11:00 AM","room":"12D-26L"},{"course":"CSE321-25","day":"SAT","time":"8:00 AM","room":"12D-26L"},{"course":"CSE321-26","day":"SAT","time":"11:00 AM","room":"12D-26L"},{"course":"CSE321-27","day":"MON","time":"11:00 AM","room":"09E-22L"},{"course":"CSE330-01","day":"TUE","time":"8:00 AM","room":"10G-34L"},{"course":"CSE330-02","day":"TUE","time":"11:00 AM","room":"10G-34L"},{"course":"CSE330-03","day":"SAT","time":"8:00 AM","room":"10G-34L"},{"course":"CSE330-04","day":"SAT","time":"11:00 AM","room":"10G-34L"},{"course":"CSE330-05","day":"SUN","time":"11:00 AM","room":"10G-34L"},{"course":"CSE330-06","day":"SUN","time":"11:00 AM","room":"09F-27L"},{"course":"CSE330-07","day":"SUN","time":"2:00 PM","room":"09F-27L"},{"course":"CSE330-08","day":"TUE","time":"2:00 PM","room":"10G-34L"},{"course":"CSE330-09","day":"THU","time":"8:00 AM","room":"12D-27L"},{"course":"CSE330-10","day":"SAT","time":"2:00 PM","room":"10G-34L"},{"course":"CSE330-11","day":"MON","time":"8:00 AM","room":"10G-34L"},{"course":"CSE330-12","day":"THU","time":"11:00 AM","room":"12D-27L"},{"course":"CSE330-13","day":"THU","time":"2:00 PM","room":"12D-27L"},{"course":"CSE330-14","day":"MON","time":"11:00 AM","room":"10G-34L"},{"course":"CSE330-15","day":"MON","time":"2:00 PM","room":"10G-34L"},{"course":"CSE330-16","day":"SUN","time":"8:00 AM","room":"12F-30L"},{"course":"CSE330-17","day":"WED","time":"8:00 AM","room":"10G-34L"},{"course":"CSE330-18","day":"WED","time":"11:00 AM","room":"10G-34L"},{"course":"CSE330-19","day":"MON","time":"8:00 AM","room":"12D-26L"},{"course":"CSE330-20","day":"WED","time":"2:00 PM","room":"10G-34L"},{"course":"CSE341-01","day":"THU","time":"11:00 AM","room":"12F-30L"},{"course":"CSE341-02","day":"WED","time":"8:00 AM","room":"12F-30L"},{"course":"CSE341-03","day":"TUE","time":"11:00 AM","room":"12D-27L"},{"course":"CSE341-04","day":"THU","time":"8:00 AM","room":"12F-30L"},{"course":"CSE341-05","day":"WED","time":"11:00 AM","room":"12F-30L"},{"course":"CSE341-06","day":"SAT","time":"11:00 AM","room":"12F-30L"},{"course":"CSE341-07","day":"SAT","time":"2:00 PM","room":"12F-30L"},{"course":"CSE341-08","day":"SUN","time":"8:00 AM","room":"12F-31L"},{"course":"CSE341-09","day":"SUN","time":"11:00 AM","room":"12F-31L"},{"course":"CSE341-10","day":"MON","time":"8:00 AM","room":"12F-31L"},{"course":"CSE341-11","day":"MON","time":"11:00 AM","room":"12F-31L"},{"course":"CSE341-12","day":"TUE","time":"2:00 PM","room":"12D-27L"},{"course":"CSE350-01A","day":"MON","time":"11:00 AM","room":"FT10-01L"},{"course":"CSE350-01B","day":"MON","time":"11:00 AM","room":"FT11-01L"},{"course":"CSE350-02A","day":"WED","time":"2:00 PM","room":"FT10-01L"},{"course":"CSE350-02B","day":"WED","time":"2:00 PM","room":"FT11-01L"},{"course":"CSE350-03A","day":"SAT","time":"8:00 AM","room":"FT10-01L"},{"course":"CSE350-03B","day":"SAT","time":"8:00 AM","room":"FT11-01L"},{"course":"CSE350-04A","day":"THU","time":"2:00 PM","room":"FT10-01L"},{"course":"CSE350-04B","day":"THU","time":"2:00 PM","room":"FT11-01L"},{"course":"CSE350-05A","day":"THU","time":"11:00 AM","room":"FT10-01L"},{"course":"CSE350-05B","day":"THU","time":"11:00 AM","room":"FT11-01L"},{"course":"CSE350-06A","day":"TUE","time":"2:00 PM","room":"12B-20L"},{"course":"CSE350-06B","day":"TUE","time":"2:00 PM","room":"12B-20L"},{"course":"CSE350-07A","day":"TUE","time":"8:00 AM","room":"12B-20L"},{"course":"CSE350-07B","day":"TUE","time":"8:00 AM","room":"12B-20L"},{"course":"CSE350-08A","day":"SUN","time":"8:00 AM","room":"FT10-01L"},{"course":"CSE350-09A","day":"MON","time":"2:00 PM","room":"12B-20L"},{"course":"CSE350-09B","day":"MON","time":"2:00 PM","room":"12B-20L"},{"course":"CSE350-10A","day":"SUN","time":"2:00 PM","room":"12B-20L"},{"course":"CSE350-10B","day":"SUN","time":"2:00 PM","room":"12B-20L"},{"course":"CSE350-11A","day":"WED","time":"11:00 AM","room":"FT10-01L"},{"course":"CSE360-01","day":"WED","time":"2:00 PM","room":"10G-33L"},{"course":"CSE360-02","day":"WED","time":"2:00 PM","room":"10G-33L"},{"course":"CSE360-03","day":"MON","time":"2:00 PM","room":"10G-33L"},{"course":"CSE360-04","day":"TUE","time":"2:00 PM","room":"10G-33L"},{"course":"CSE360-05","day":"SAT","time":"2:00 PM","room":"10G-33L"},{"course":"CSE360-06","day":"TUE","time":"2:00 PM","room":"10G-33L"},{"course":"CSE360-07","day":"MON","time":"2:00 PM","room":"10G-33L"},{"course":"CSE360-08","day":"SAT","time":"2:00 PM","room":"10G-33L"},{"course":"CSE370-01","day":"THU","time":"8:00 AM","room":"12F-31L"},{"course":"CSE370-02","day":"TUE","time":"11:00 AM","room":"12F-31L"},{"course":"CSE370-03","day":"MON","time":"8:00 AM","room":"12F-32L"},{"course":"CSE370-04","day":"SAT","time":"8:00 AM","room":"12F-30L"},{"course":"CSE370-05","day":"SUN","time":"2:00 PM","room":"12F-32L"},{"course":"CSE370-06","day":"MON","time":"2:00 PM","room":"12F-32L"},{"course":"CSE370-07","day":"SAT","time":"11:00 AM","room":"12F-31L"},{"course":"CSE370-08","day":"SUN","time":"8:00 AM","room":"12F-32L"},{"course":"CSE370-09","day":"SUN","time":"11:00 AM","room":"12F-32L"},{"course":"CSE370-10","day":"WED","time":"2:00 PM","room":"10E-27L"},{"course":"CSE370-11","day":"THU","time":"2:00 PM","room":"12F-31L"},{"course":"CSE370-13","day":"THU","time":"11:00 AM","room":"12F-31L"},{"course":"CSE370-14","day":"WED","time":"2:00 PM","room":"12F-30L"},{"course":"CSE370-15","day":"WED","time":"8:00 AM","room":"12F-31L"},{"course":"CSE370-16","day":"TUE","time":"8:00 AM","room":"12F-31L"},{"course":"CSE370-17","day":"MON","time":"11:00 AM","room":"12F-32L"},{"course":"CSE370-18","day":"THU","time":"2:00 PM","room":"10E-27L"},{"course":"CSE391-01","day":"TUE","time":"2:00 PM","room":"FT11-04L"},{"course":"CSE402-01","day":"THU","time":"11:00 AM","room":"09B-10L"},{"course":"CSE419-01","day":"MON","time":"2:00 PM","room":"FT11-03L"},{"course":"CSE420-01","day":"TUE","time":"8:00 AM","room":"10E-27L"},{"course":"CSE420-02","day":"SUN","time":"8:00 AM","room":"10G-34L"},{"course":"CSE420-03","day":"SAT","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-04","day":"SAT","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-05","day":"THU","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-06","day":"THU","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-07","day":"SUN","time":"8:00 AM","room":"10G-34L"},{"course":"CSE420-08","day":"SUN","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-09","day":"SUN","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-10","day":"MON","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-11","day":"MON","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-12","day":"MON","time":"2:00 PM","room":"10E-27L"},{"course":"CSE420-13","day":"MON","time":"2:00 PM","room":"10E-27L"},{"course":"CSE420-14","day":"WED","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-15","day":"WED","time":"11:00 AM","room":"10E-27L"},{"course":"CSE420-16","day":"TUE","time":"2:00 PM","room":"10E-27L"},{"course":"CSE420-17","day":"TUE","time":"2:00 PM","room":"10E-27L"},{"course":"CSE420-18","day":"TUE","time":"8:00 AM","room":"10E-27L"},{"course":"CSE420-19","day":"WED","time":"11:00 AM","room":"12F-31L"},{"course":"CSE420-20","day":"WED","time":"11:00 AM","room":"12F-31L"},{"course":"CSE421-01","day":"THU","time":"8:00 AM","room":"09F-25L"},{"course":"CSE421-02","day":"THU","time":"8:00 AM","room":"09F-25L"},{"course":"CSE421-03","day":"SAT","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-04","day":"SAT","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-05","day":"SAT","time":"11:00 AM","room":"09F-25L"},{"course":"CSE421-06","day":"SAT","time":"11:00 AM","room":"09F-25L"},{"course":"CSE421-07","day":"SAT","time":"8:00 AM","room":"09F-25L"},{"course":"CSE421-08","day":"WED","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-09","day":"WED","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-10","day":"WED","time":"11:00 AM","room":"09F-25L"},{"course":"CSE421-11","day":"THU","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-12","day":"THU","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-13","day":"TUE","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-14","day":"TUE","time":"2:00 PM","room":"09F-25L"},{"course":"CSE421-15","day":"TUE","time":"11:00 AM","room":"09F-24L"},{"course":"CSE421-16","day":"TUE","time":"11:00 AM","room":"09F-24L"},{"course":"CSE421-17","day":"WED","time":"11:00 AM","room":"09F-25L"},{"course":"CSE421-18","day":"SUN","time":"8:00 AM","room":"10E-27L"},{"course":"CSE421-19","day":"SAT","time":"8:00 AM","room":"09F-25L"},{"course":"CSE421-20","day":"MON","time":"8:00 AM","room":"09F-25L"},{"course":"CSE421-21","day":"SUN","time":"2:00 PM","room":"10E-27L"},{"course":"CSE421-22","day":"SUN","time":"2:00 PM","room":"10E-27L"},{"course":"CSE421-23","day":"MON","time":"8:00 AM","room":"09F-25L"},{"course":"CSE421-24","day":"MON","time":"11:00 AM","room":"09F-25L"},{"course":"CSE421-25","day":"MON","time":"11:00 AM","room":"09F-25L"},{"course":"CSE421-26","day":"THU","time":"11:00 AM","room":"09F-25L"},{"course":"CSE421-27","day":"SUN","time":"8:00 AM","room":"10E-27L"},{"course":"CSE421-28","day":"THU","time":"11:00 AM","room":"09F-25L"},{"course":"CSE422-01","day":"TUE","time":"11:00 AM","room":"09F-25L"},{"course":"CSE422-02","day":"WED","time":"8:00 AM","room":"09F-26L"},{"course":"CSE422-03","day":"SAT","time":"8:00 AM","room":"09F-26L"},{"course":"CSE422-04","day":"WED","time":"11:00 AM","room":"09F-26L"},{"course":"CSE422-05","day":"WED","time":"2:00 PM","room":"09F-26L"},{"course":"CSE422-06","day":"WED","time":"2:00 PM","room":"09F-27L"},{"course":"CSE422-07","day":"MON","time":"2:00 PM","room":"09F-24L"},{"course":"CSE422-08","day":"SUN","time":"8:00 AM","room":"09F-26L"},{"course":"CSE422-09","day":"SAT","time":"11:00 AM","room":"09F-26L"},{"course":"CSE422-10","day":"MON","time":"8:00 AM","room":"09F-24L"},{"course":"CSE422-11","day":"THU","time":"8:00 AM","room":"09F-26L"},{"course":"CSE422-12","day":"THU","time":"11:00 AM","room":"09F-26L"},{"course":"CSE422-13","day":"MON","time":"11:00 AM","room":"09F-24L"},{"course":"CSE422-14","day":"MON","time":"2:00 PM","room":"09F-25L"},{"course":"CSE422-15","day":"THU","time":"2:00 PM","room":"09F-26L"},{"course":"CSE422-16","day":"THU","time":"8:00 AM","room":"09F-27L"},{"course":"CSE422-17","day":"TUE","time":"8:00 AM","room":"09F-26L"},{"course":"CSE422-18","day":"SUN","time":"11:00 AM","room":"10G-33L"},{"course":"CSE422-19","day":"SUN","time":"11:00 AM","room":"09F-26L"},{"course":"CSE422-20","day":"SUN","time":"2:00 PM","room":"09F-26L"},{"course":"CSE422-21","day":"TUE","time":"2:00 PM","room":"09F-26L"},{"course":"CSE422-22","day":"SAT","time":"2:00 PM","room":"09F-26L"},{"course":"CSE422-23","day":"SAT","time":"8:00 AM","room":"09F-27L"},{"course":"CSE423-01","day":"SAT","time":"11:00 AM","room":"09F-27L"},{"course":"CSE423-02","day":"SAT","time":"11:00 AM","room":"09F-27L"},{"course":"CSE423-03","day":"TUE","time":"11:00 AM","room":"09E-22L"},{"course":"CSE423-04","day":"TUE","time":"11:00 AM","room":"09E-22L"},{"course":"CSE423-05","day":"SAT","time":"2:00 PM","room":"09F-27L"},{"course":"CSE423-06","day":"SAT","time":"2:00 PM","room":"09F-27L"},{"course":"CSE423-07","day":"TUE","time":"2:00 PM","room":"09F-24L"},{"course":"CSE423-08","day":"MON","time":"8:00 AM","room":"09E-22L"},{"course":"CSE423-09","day":"MON","time":"8:00 AM","room":"09E-22L"},{"course":"CSE423-10","day":"TUE","time":"2:00 PM","room":"09F-24L"},{"course":"CSE423-11","day":"SUN","time":"2:00 PM","room":"09F-25L"},{"course":"CSE423-12","day":"SUN","time":"2:00 PM","room":"09F-25L"},{"course":"CSE423-13","day":"MON","time":"2:00 PM","room":"09E-22L"},{"course":"CSE423-14","day":"MON","time":"2:00 PM","room":"09E-22L"},{"course":"CSE423-15","day":"WED","time":"8:00 AM","room":"10E-27L"},{"course":"CSE423-16","day":"WED","time":"8:00 AM","room":"10E-27L"},{"course":"CSE423-17","day":"WED","time":"2:00 PM","room":"12F-31L"},{"course":"CSE423-18","day":"WED","time":"2:00 PM","room":"12F-31L"},{"course":"CSE423-19","day":"WED","time":"11:00 AM","room":"09F-24L"},{"course":"CSE423-20","day":"SUN","time":"8:00 AM","room":"09F-27L"},{"course":"CSE423-21","day":"WED","time":"11:00 AM","room":"09F-24L"},{"course":"CSE423-22","day":"WED","time":"2:00 PM","room":"09F-24L"},{"course":"CSE423-23","day":"THU","time":"11:00 AM","room":"09F-24L"},{"course":"CSE423-24","day":"THU","time":"11:00 AM","room":"09F-24L"},{"course":"CSE423-25","day":"SUN","time":"8:00 AM","room":"09F-27L"},{"course":"CSE424-01","day":"MON","time":"11:00 AM","room":"12D-26L"},{"course":"CSE424-02","day":"MON","time":"11:00 AM","room":"12D-26L"},{"course":"CSE427-01","day":"MON","time":"8:00 AM","room":"09F-27L"},{"course":"CSE427-02","day":"TUE","time":"8:00 AM","room":"09F-27L"},{"course":"CSE427-03","day":"TUE","time":"11:00 AM","room":"09F-27L"},{"course":"CSE427-04","day":"MON","time":"11:00 AM","room":"09F-26L"},{"course":"CSE427-05","day":"MON","time":"11:00 AM","room":"09F-27L"},{"course":"CSE427-06","day":"TUE","time":"2:00 PM","room":"09F-27L"},{"course":"CSE427-07","day":"MON","time":"2:00 PM","room":"09F-26L"},{"course":"CSE427-08","day":"MON","time":"2:00 PM","room":"09F-27L"},{"course":"CSE427-09","day":"TUE","time":"8:00 AM","room":"09B-11L"},{"course":"CSE427-10","day":"TUE","time":"11:00 AM","room":"09B-11L"},{"course":"CSE428-01","day":"TUE","time":"11:00 AM","room":"09F-26L"},{"course":"CSE428-02","day":"MON","time":"11:00 AM","room":"10G-33L"},{"course":"CSE428-03","day":"TUE","time":"2:00 PM","room":"09B-10L"},{"course":"CSE428-04","day":"MON","time":"8:00 AM","room":"09F-26L"},{"course":"CSE430-01","day":"MON","time":"2:00 PM","room":"12D-26L"},{"course":"CSE440-01","day":"SUN","time":"11:00 AM","room":"12F-30L"},{"course":"CSE440-02","day":"SUN","time":"11:00 AM","room":"12F-30L"},{"course":"CSE440-03","day":"TUE","time":"11:00 AM","room":"12F-32L"},{"course":"CSE440-04","day":"TUE","time":"11:00 AM","room":"12F-32L"},{"course":"CSE446-01","day":"TUE","time":"11:00 AM","room":"10E-27L"},{"course":"CSE447-01","day":"SAT","time":"8:00 AM","room":"09F-24L"},{"course":"CSE447-02","day":"SAT","time":"11:00 AM","room":"09F-24L"},{"course":"CSE447-03","day":"SAT","time":"2:00 PM","room":"09F-24L"},{"course":"CSE460-01","day":"WED","time":"11:00 AM","room":"09E-22L"},{"course":"CSE460-02","day":"SAT","time":"2:00 PM","room":"09E-21L"},{"course":"CSE460-03","day":"THU","time":"2:00 PM","room":"09E-21L"},{"course":"CSE460-04","day":"MON","time":"11:00 AM","room":"09E-21L"},{"course":"CSE460-05","day":"SUN","time":"2:00 PM","room":"10G-32L"},{"course":"CSE460-06","day":"TUE","time":"11:00 AM","room":"09E-21L"},{"course":"CSE460-07","day":"THU","time":"11:00 AM","room":"09E-21L"},{"course":"CSE460-08","day":"SAT","time":"11:00 AM","room":"09E-21L"},{"course":"CSE460-09","day":"SUN","time":"8:00 AM","room":"10G-32L"},{"course":"CSE460-10","day":"WED","time":"8:00 AM","room":"09E-22L"},{"course":"CSE460-11","day":"TUE","time":"2:00 PM","room":"09E-21L"},{"course":"CSE460-12","day":"MON","time":"2:00 PM","room":"09E-21L"},{"course":"CSE461-01","day":"WED","time":"2:00 PM","room":"10G-32L"},{"course":"CSE461-02","day":"THU","time":"2:00 PM","room":"10G-32L"},{"course":"CSE461-03","day":"TUE","time":"11:00 AM","room":"10G-32L"},{"course":"CSE461-04","day":"THU","time":"11:00 AM","room":"10G-32L"},{"course":"CSE461-05","day":"MON","time":"11:00 AM","room":"10G-32L"},{"course":"CSE461-06","day":"SUN","time":"11:00 AM","room":"10G-32L"},{"course":"CSE461-07","day":"SAT","time":"8:00 AM","room":"10G-32L"},{"course":"CSE461-08","day":"SAT","time":"11:00 AM","room":"10G-32L"},{"course":"CSE463-01","day":"TUE","time":"2:00 PM","room":"12F-32L"},{"course":"CSE471-01","day":"THU","time":"11:00 AM","room":"09E-22L"},{"course":"CSE471-02","day":"SUN","time":"11:00 AM","room":"12D-26L"},{"course":"CSE471-03","day":"WED","time":"11:00 AM","room":"12F-32L"},{"course":"CSE471-04","day":"SAT","time":"8:00 AM","room":"09E-22L"},{"course":"CSE471-05","day":"SAT","time":"11:00 AM","room":"09E-22L"},{"course":"CSE471-06","day":"THU","time":"2:00 PM","room":"09E-22L"},{"course":"CSE471-07","day":"THU","time":"8:00 AM","room":"09E-22L"},{"course":"CSE471-08","day":"WED","time":"8:00 AM","room":"12F-32L"},{"course":"CSE471-09","day":"SUN","time":"2:00 PM","room":"12D-26L"},{"course":"CSE471-10","day":"SAT","time":"2:00 PM","room":"09E-22L"},{"course":"CSE471-11","day":"MON","time":"11:00 AM","room":"12F-30L"},{"course":"CSE471-12","day":"MON","time":"2:00 PM","room":"12F-30L"},{"course":"CSE471-13","day":"TUE","time":"8:00 AM","room":"12F-30L"},{"course":"CSE471-14","day":"TUE","time":"11:00 AM","room":"12F-30L"},{"course":"CSE472-01","day":"TUE","time":"2:00 PM","room":"12F-30L"},{"course":"CSE481-01","day":"THU","time":"8:00 AM","room":"09B-10L"},{"course":"CSE489-01","day":"SUN","time":"2:00 PM","room":"FT11-04L"},{"course":"CSE490B-01","day":"SUN","time":"2:00 PM","room":"10G-34L"},{"course":"CSE490C-01","day":"THU","time":"2:00 PM","room":"12D-26L"},{"course":"EEE362-01","day":"SAT","time":"2:00 PM","room":"FT11-03L"}];
+
+// All known lab rooms
+const ALL_ROOMS = ['09B-08L','09B-09L','09B-10L','09B-11L','09E-21L','09E-22L','09F-24L','09F-25L','09F-26L','09F-27L','10E-27L','10G-32L','10G-33L','10G-34L','11B-20L','12B-20L','12D-26L','12D-27L','12F-30L','12F-31L','12F-32L','FT10-01L','FT10-02L','FT10-03L','FT10-04L','FT11-01L','FT11-03L','FT11-04L'];
+
+// Parse floor info from room name
+function parseRoom(room) {
+  // e.g. 09B-08L → floor 9, zone B, no 08
+  // FT11-04L → floor FT11
+  const m = room.match(/^(\d+)([A-Z]+)-(\d+)L$/);
+  if (m) return { floor: parseInt(m[1]), zone: m[2], no: m[3], display: `Floor ${parseInt(m[1])} · Zone ${m[2]}` };
+  const ft = room.match(/^(FT\d+)-(\d+)L$/);
+  if (ft) return { floor: ft[1], zone: '', no: ft[2], display: ft[1] };
+  return { floor: '?', zone: '', no: '', display: '?' };
+}
+
+// Group rooms by floor
+function groupByFloor(rooms) {
+  const groups = {};
+  rooms.forEach(r => {
+    const p = parseRoom(r);
+    const key = p.display;
+    if (!groups[key]) groups[key] = { label: key, rooms: [], floorNum: typeof p.floor === 'number' ? p.floor : 999 };
+    groups[key].rooms.push(r);
+  });
+  return Object.values(groups).sort((a,b) => a.floorNum - b.floorNum);
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let selectedDay = null;
+let selectedTime = null;
+
+// ─── UI LOGIC ────────────────────────────────────────────────────────────────
+document.querySelectorAll('#dayBtns .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#dayBtns .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedDay = btn.dataset.day;
+    updateStatus();
+  });
+});
+
+document.querySelectorAll('#timeBtns .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#timeBtns .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedTime = btn.dataset.time;
+    updateStatus();
+  });
+});
+
+function updateStatus() {
+  const sb = document.getElementById('searchBtn');
+  const st = document.getElementById('statusText');
+  if (selectedDay && selectedTime) {
+    sb.disabled = false;
+    const timeLabel = selectedTime === '8:00 AM' ? '8:00–11:00 AM' : selectedTime === '11:00 AM' ? '11:00 AM–2:00 PM' : '2:00–5:00 PM';
+    st.textContent = `READY — ${selectedDay} · ${timeLabel}`;
+    st.style.color = 'var(--green)';
+  } else if (selectedDay) {
+    st.textContent = 'NOW SELECT A TIME SLOT';
+    st.style.color = 'var(--muted)';
+  } else if (selectedTime) {
+    st.textContent = 'NOW SELECT A DAY';
+    st.style.color = 'var(--muted)';
+  } else {
+    st.textContent = 'SELECT DAY AND TIME SLOT ABOVE';
+    st.style.color = 'var(--muted)';
+  }
+}
+
+document.getElementById('searchBtn').addEventListener('click', () => {
+  if (!selectedDay || !selectedTime) return;
+
+  // Find busy rooms
+  const busy = new Set(
+    schedule
+      .filter(s => s.day === selectedDay && s.time === selectedTime)
+      .map(s => s.room)
+  );
+
+  const freeRooms = ALL_ROOMS.filter(r => !busy.has(r));
+  const floorGroups = groupByFloor(freeRooms);
+
+  const timeLabel = selectedTime === '8:00 AM' ? '8:00 – 11:00 AM' : selectedTime === '11:00 AM' ? '11:00 AM – 2:00 PM' : '2:00 – 5:00 PM';
+  const output = document.getElementById('output');
+
+  if (freeRooms.length === 0) {
+    output.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <div class="empty-title">No free labs found</div>
+        <div class="empty-sub">// ALL LABS ARE OCCUPIED ON ${selectedDay} · ${timeLabel}</div>
+      </div>`;
+    return;
+  }
+
+  let html = `
+    <div class="summary-strip">
+      <span class="tag tag-day">${selectedDay}</span>
+      <span class="tag tag-time">${timeLabel}</span>
+      <span class="tag tag-count">${freeRooms.length} FREE / ${ALL_ROOMS.length} TOTAL</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto">${busy.size} ROOMS OCCUPIED</span>
+    </div>
+    <div class="results-header">
+      <span class="results-title">FREE LABS AVAILABLE</span>
+      <span class="results-count">${freeRooms.length}</span>
+    </div>`;
+
+  floorGroups.forEach((group, gi) => {
+    html += `<div class="floor-section">
+      <div class="floor-header">${group.label}</div>
+      <div class="room-grid">`;
+    group.rooms.forEach((room, ri) => {
+      const p = parseRoom(room);
+      const delay = (gi * 50 + ri * 40);
+      html += `
+        <div class="room-card" style="animation-delay:${delay}ms">
+          <div class="room-name">${room}</div>
+          <div class="room-floor">${typeof p.floor === 'number' ? `Floor ${p.floor}` : p.floor}${p.zone ? ` · Zone ${p.zone}` : ''} · Room ${p.no}</div>
+          <div class="room-status"><span class="room-status-dot"></span>FREE</div>
+        </div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  output.innerHTML = html;
+});
+</script>
+</body>
+</html>
