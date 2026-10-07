@@ -1,0 +1,14 @@
+# Firebase
+.firebase/
+firebase-debug.log
+*-debug.log
+
+# Node
+node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Routine CSVs you download each semester (optional - delete this line if you want to keep them in the repo)
+*.csv
