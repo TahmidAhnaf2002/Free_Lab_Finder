@@ -1,0 +1,55 @@
+{
+  "name": "Free Lab Finder — BRACU CSE",
+  "short_name": "Lab Finder",
+  "description": "Find an empty CSE lab room at BRAC University, from the official department routine.",
+  "id": "/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070b0d",
+  "theme_color": "#070b0d",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Free right now",
+      "short_name": "Now",
+      "url": "./",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My week",
+      "short_name": "My week",
+      "url": "./?tab=mine",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Whole week grid",
+      "short_name": "Week",
+      "url": "./?tab=week",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

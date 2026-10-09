@@ -31,8 +31,11 @@ END = "/* ROUTINE-DATA:END */"
 
 
 def clean(value):
+    """Blank out placeholders and leaked spreadsheet errors (#REF!, #N/A ...)."""
     value = (value or "").strip()
-    return "" if value.upper() == "XXX" else value
+    if value.upper() == "XXX" or value.startswith("#"):
+        return ""
+    return value
 
 
 def read_courses(path):
@@ -82,11 +85,44 @@ def build(courses):
     return {"rooms": sorted(rooms), "bookings": bookings, "courses": courses}, skipped
 
 
+def bump_service_worker(sw, label):
+    """Change VERSION in sw.js so returning students get the new routine, not
+    whatever their browser cached last semester."""
+    if sw is None or not sw.exists():
+        return
+    text = sw.read_text(encoding="utf-8")
+    match = re.search(r"const VERSION = '([^']*)';", text)
+    if not match:
+        print(f"\n  Could not find VERSION in {sw}; bump it by hand.")
+        return
+
+    old = match.group(1)
+    if label:
+        base = label.lower().replace(" ", "")
+        new = f"{base}-1"
+        if old.startswith(base + "-"):
+            try:
+                new = f"{base}-{int(old.rsplit('-', 1)[1]) + 1}"
+            except ValueError:
+                pass
+    else:
+        try:
+            head, num = old.rsplit("-", 1)
+            new = f"{head}-{int(num) + 1}"
+        except ValueError:
+            new = old + "-1"
+
+    sw.write_text(text.replace(f"const VERSION = '{old}';",
+                               f"const VERSION = '{new}';", 1), encoding="utf-8")
+    print(f"  cache ver  {old} -> {new}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("csv", help="the department routine CSV")
     ap.add_argument("--page", default="index.html")
     ap.add_argument("--label", help='semester shown on the page, e.g. "Spring 2027"')
+    ap.add_argument("--sw", default="sw.js", help="service worker to bump (set to '' to skip)")
     args = ap.parse_args()
 
     page = Path(args.page)
@@ -112,11 +148,15 @@ def main():
     html = html[:a] + block + html[b + len(END):]
 
     if args.label:
+        season = args.label.lower().replace(" ", "")
+        html = re.sub(r"(?<=season: ')[^']+", season, html)
         html = re.sub(r"(?<=<small>BRACU CSE · )[^<]+", args.label, html)
         html = re.sub(r"(?<=<title>Free Lab Finder — BRACU CSE, )[^<]+", args.label, html)
         html = re.sub(r"'[A-Za-z]+ \d{4} CSE routine · '", f"'{args.label} CSE routine · '", html)
 
     page.write_text(html, encoding="utf-8")
+
+    bump_service_worker(Path(args.sw) if args.sw else None, args.label)
 
     cells = len(data["rooms"]) * len(DAYS) * len(SLOTS)
     busy = len({(x["r"], x["d"], x["t"]) for x in data["bookings"]})

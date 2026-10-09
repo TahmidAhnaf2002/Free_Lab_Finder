@@ -1,5 +1,7 @@
 # Firebase
 .firebase/
+service-account.json
+*-service-account.json
 firebase-debug.log
 *-debug.log
 

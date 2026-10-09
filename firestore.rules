@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Free Lab Finder - usage counting.
+//
+// The website is allowed to ADD a row and nothing else. It cannot read,
+// change or delete anything. Reading the numbers is done by stats.py with a
+// service account key, which these rules do not apply to.
+//
+// Deploy with:  firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function str(value, maxLen) {
+      return value is string && value.size() > 0 && value.size() <= maxLen;
+    }
+
+    // one row per session, plus a row when someone shares, installs or saves
+    // their sections. Nothing here identifies a person.
+    match /events/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['t', 'day', 'aid', 'app', 'v'])
+                    && str(request.resource.data.t, 16)
+                    && str(request.resource.data.day, 10)
+                    && request.resource.data.aid is string
+                    && request.resource.data.aid.size() == 16
+                    && str(request.resource.data.v, 24)
+                    && request.resource.data.app is bool;
+      allow read, update, delete: if false;
+    }
+
+    // one row per device, ever. Counting these gives the number of students.
+    match /students/{aid} {
+      allow create: if aid.size() == 16
+                    && request.resource.data.keys().hasOnly(['first', 'v'])
+                    && str(request.resource.data.first, 10)
+                    && str(request.resource.data.v, 24);
+      allow read, update, delete: if false;
+    }
+
+    // everything else is closed
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

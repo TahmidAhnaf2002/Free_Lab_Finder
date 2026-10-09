@@ -1,0 +1,81 @@
+name: Deploy
+
+# Push to main and the live site updates itself.
+# Nothing deploys unless check_build.py passes first.
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: # also lets you deploy by hand from the Actions tab
+
+concurrency:
+  group: deploy-live
+  cancel-in-progress: false # never cut a deploy off half way
+
+env:
+  FIREBASE_PROJECT: free-lab-finder
+
+jobs:
+  deploy:
+    name: Check and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check the build
+        run: python check_build.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install the Firebase CLI
+        # pin this to a known good version if an update ever breaks the deploy,
+        # e.g. npm install -g firebase-tools@14.1.0
+        run: npm install -g firebase-tools
+
+      - name: Unlock Firebase
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "The FIREBASE_SERVICE_ACCOUNT secret is missing or empty."
+            echo "Repo Settings -> Secrets and variables -> Actions -> New repository secret"
+            exit 1
+          fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          python -c "import json,sys; json.load(open(sys.argv[1]))" "$RUNNER_TEMP/sa.json" \
+            || { echo "The secret is not valid JSON. Paste the whole key file, braces included."; exit 1; }
+
+      - name: Deploy the site
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          firebase deploy --only hosting \
+            --project "$FIREBASE_PROJECT" \
+            --non-interactive \
+            --message "${{ github.event.head_commit.message || 'manual deploy' }}"
+
+      - name: Deploy the database rules
+        # this step is allowed to fail: it only works once Firestore has been
+        # created in the console, and the site itself does not depend on it
+        continue-on-error: true
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT" --non-interactive
+
+      - name: Say where it went
+        run: |
+          echo "### Deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://$FIREBASE_PROJECT.web.app" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Shred the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
