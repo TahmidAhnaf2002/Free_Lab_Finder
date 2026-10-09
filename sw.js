@@ -3,8 +3,8 @@
  * The routine lives inside index.html, so a stale page means a student reads
  * last semester's schedule. That is worse than a slow page. So:
  *
- *   index.html  -> network first, with a short timeout, cache as a backup
- *   icons, fonts -> cache first, refreshed quietly in the background
+ *   index.html -> network first, with a short timeout, cache as a backup
+ *   fonts      -> cache first, refreshed quietly in the background
  *
  * update_routine.py bumps VERSION every semester, which wipes the old cache.
  */
@@ -16,13 +16,7 @@ const TIMEOUT = 2500;
 
 const SHELL = [
   './',
-  './index.html',
-  './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/maskable-512.png',
-  './icons/apple-touch-icon.png',
-  './icons/favicon-32.png'
+  './index.html'
 ];
 
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
@@ -74,8 +68,24 @@ async function networkFirst(request) {
     // the cache for next time
     const hit = (await cache.match(PAGE)) || (await cache.match('./'));
     if (hit) return hit;
-    throw err;
+    // never hand back a rejected promise: the browser cannot render that and
+    // shows a confusing "Failed to convert value to 'Response'" instead
+    return offlinePage();
   }
+}
+
+function offlinePage() {
+  return new Response(
+    '<!doctype html><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Free Lab Finder</title>'
+    + '<body style="background:#070b0d;color:#d7e5ea;font-family:system-ui;'
+    + 'display:grid;place-items:center;height:100vh;margin:0;text-align:center">'
+    + '<div><h1 style="font-size:19px">No connection</h1>'
+    + '<p style="color:#7795a0;font-size:14px">Open this once while online and '
+    + 'it will work offline afterwards.</p></div>',
+    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  );
 }
 
 async function cacheFirst(request) {
@@ -110,6 +120,10 @@ self.addEventListener('fetch', event => {
   }
 
   if (sameOrigin || FONT_HOSTS.includes(url.hostname)) {
-    event.respondWith(cacheFirst(request).catch(() => caches.match(request)));
+    event.respondWith(
+      cacheFirst(request)
+        .catch(() => caches.match(request))
+        .then(res => res || new Response('', { status: 504 }))
+    );
   }
 });

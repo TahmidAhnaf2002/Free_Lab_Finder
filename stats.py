@@ -99,7 +99,7 @@ def main():
     students = count(s, project, "students", where)
     sessions = count(s, project, "events", {**where, "t": "session"})
     shares = count(s, project, "events", {**where, "t": "share"})
-    installs = count(s, project, "events", {**where, "t": "install"})
+    checkins = count(s, project, "events", {**where, "t": "checkin"})
     schedules = count(s, project, "events", {**where, "t": "mine"})
 
     print(f"\nFree Lab Finder{scope}")
@@ -111,7 +111,7 @@ def main():
     print()
     print(f"  schedules saved   {schedules:>8,}")
     print(f"  links shared      {shares:>8,}")
-    print(f"  app installs      {installs:>8,}")
+    print(f"  check-ins         {checkins:>8,}")
 
     if args.days > 0:
         print(f"\n  last {args.days} days")

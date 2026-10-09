@@ -15,7 +15,19 @@ service cloud.firestore {
       return value is string && value.size() > 0 && value.size() <= maxLen;
     }
 
-    // one row per session, plus a row when someone shares, installs or saves
+    function liveOk(room, d) {
+      return d.keys().hasOnly(['s', 't', 'aid', 'v'])
+             && d.s in ['free', 'some', 'full', 'locked']
+             && d.t is int
+             // the clock has to roughly agree with the server's
+             && d.t <= request.time.toMillis() + 120000
+             && d.t >= request.time.toMillis() - 120000
+             && d.aid is string && d.aid.size() == 16
+             && str(d.v, 24)
+             && room.matches('^[A-Z0-9]{3}-[0-9]{2}L$');
+    }
+
+    // one row per session, plus a row when someone shares a link or saves
     // their sections. Nothing here identifies a person.
     match /events/{id} {
       allow create: if request.resource.data.keys().hasOnly(['t', 'day', 'aid', 'app', 'v'])
@@ -35,6 +47,42 @@ service cloud.firestore {
                     && str(request.resource.data.first, 10)
                     && str(request.resource.data.v, 24);
       allow read, update, delete: if false;
+    }
+
+    // Live check-in. One row per room holding only the newest report.
+    //
+    // Three things stop one person steering the whole site:
+    //   - the timestamp must be close to the server's clock, so nobody can
+    //     write a far-future time and freeze a room's status
+    //   - a room can only change once every five minutes, by anyone
+    //   - the browser also holds each device to one report per room per
+    //     quarter hour, though that part is only politeness
+    match /live/{room} {
+      allow read: if true;
+      allow create: if liveOk(room, request.resource.data);
+      allow update: if liveOk(room, request.resource.data)
+                    && request.resource.data.t > resource.data.t + 300000;
+      allow delete: if false;
+    }
+
+    // Everything above has a _test twin for localhost and preview builds, so
+    // development never touches what students see.
+    match /events_test/{id} {
+      allow read, create: if true;
+      allow update, delete: if false;
+    }
+
+    match /students_test/{aid} {
+      allow read, create: if true;
+      allow update, delete: if false;
+    }
+
+    match /live_test/{room} {
+      allow read: if true;
+      allow create: if liveOk(room, request.resource.data);
+      allow update: if liveOk(room, request.resource.data)
+                    && request.resource.data.t > resource.data.t + 300000;
+      allow delete: if false;
     }
 
     // everything else is closed

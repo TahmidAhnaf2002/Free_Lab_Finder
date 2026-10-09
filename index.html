@@ -6,13 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Free Lab Finder — BRACU CSE, Fall 2026</title>
   <meta name="description" content="Find an empty CSE lab room at BRAC University. Live availability from the Fall 2026 routine.">
-  <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#070b0d" id="themeColor">
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Lab Finder">
+  <!-- favicon drawn inline so the site stays a plain set of files -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230e1619'/%3E%3Cg fill='%233ddc84'%3E%3Crect x='4' y='4' width='7' height='7' rx='2'/%3E%3Crect x='22' y='4' width='7' height='7' rx='2'/%3E%3Crect x='13' y='13' width='7' height='7' rx='2'/%3E%3Crect x='4' y='22' width='7' height='7' rx='2'/%3E%3Crect x='13' y='22' width='7' height='7' rx='2'/%3E%3C/g%3E%3Cg fill='%23223238'%3E%3Crect x='13' y='4' width='7' height='7' rx='2'/%3E%3Crect x='4' y='13' width='7' height='7' rx='2'/%3E%3Crect x='22' y='13' width='7' height='7' rx='2'/%3E%3Crect x='22' y='22' width='7' height='7' rx='2'/%3E%3C/g%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -585,71 +581,6 @@
 
     .offline[hidden] { display: none; }
 
-    .installbar {
-      position: fixed;
-      left: 50%;
-      bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-      transform: translateX(-50%);
-      z-index: 940;
-      width: min(430px, calc(100vw - 24px));
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 11px 13px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
-      animation: toastIn .3s ease;
-    }
-
-    .installbar[hidden] { display: none; }
-
-    .installbar img {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
-      flex: none;
-    }
-
-    .installbar p {
-      flex: 1;
-      font-size: 12.5px;
-      line-height: 1.35;
-      color: var(--dim);
-      min-width: 0;
-    }
-
-    .installbar p b {
-      display: block;
-      color: var(--text);
-      font-size: 13px;
-    }
-
-    .installbar .go {
-      font: inherit;
-      font-size: 12.5px;
-      font-weight: 700;
-      background: var(--free);
-      border: 0;
-      color: #06110b;
-      padding: 8px 13px;
-      border-radius: 8px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .installbar .no {
-      font: inherit;
-      font-size: 15px;
-      line-height: 1;
-      background: none;
-      border: 0;
-      color: var(--faint);
-      cursor: pointer;
-      padding: 4px 2px;
-    }
-
     .toast {
       position: fixed;
       left: 50%;
@@ -677,6 +608,125 @@
       to   { opacity: 1; transform: translate(-50%, 0); }
     }
 
+    /* ─────────── live check-in ─────────── */
+    .chip {
+      position: relative;
+    }
+
+    .livebadge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 100%;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.35;
+      border-radius: 10px;
+      padding: 3px 8px;
+      margin-top: 7px;
+      border: 1px solid currentColor;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .livebadge span {
+      min-width: 0;
+    }
+
+    .livebadge.s-free { color: var(--free); }
+    .livebadge.s-some { color: #ffb020; }
+    .livebadge.s-full,
+    .livebadge.s-locked { color: var(--busy); }
+    .livebadge.stale { opacity: .55; }
+
+    .livebadge i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+      flex: none;
+      animation: blink 1.9s steps(1) infinite;
+    }
+
+    .livebadge.stale i { animation: none; }
+
+    .now-block {
+      margin-bottom: 15px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .now-block:empty {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .now-block h4 {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--faint);
+      margin-bottom: 9px;
+    }
+
+    .latest {
+      font-size: 12.5px;
+      border-radius: var(--r);
+      padding: 9px 12px;
+      margin-bottom: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--dim);
+    }
+
+    .latest b { font-weight: 700; }
+    .latest.s-free { color: var(--free); border-color: var(--free-br); background: var(--free-bg); }
+    .latest.s-some { color: #ffb020; border-color: rgba(255,176,32,.3); background: rgba(255,176,32,.08); }
+    .latest.s-full,
+    .latest.s-locked { color: var(--busy); border-color: var(--busy-br); background: var(--busy-bg); }
+
+    .latest em {
+      font-style: normal;
+      color: var(--faint);
+      font-size: 11px;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .report {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .report button {
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--dim);
+      border-radius: 8px;
+      padding: 9px 11px;
+      cursor: pointer;
+      transition: border-color .12s, color .12s, background .12s;
+    }
+
+    .report button:hover:not(:disabled) { color: var(--text); border-color: var(--faint); }
+    .report button[data-s="free"] { color: var(--free); border-color: var(--free-br); background: var(--free-bg); }
+    .report button[data-s="free"]:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--free) 16%, transparent);
+    }
+    .report button:disabled { opacity: .5; cursor: default; }
+
+    .report-note {
+      font-size: 11px;
+      color: var(--faint);
+      margin-top: 9px;
+      line-height: 1.45;
+    }
+
     /* ─────────── room chips ─────────── */
     .group {
       margin-top: 24px;
@@ -701,7 +751,7 @@
 
     .chips {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
       gap: 8px;
     }
 
@@ -1552,7 +1602,7 @@
       }
 
       .chips {
-        grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
       }
 
       .tlrow {
@@ -1738,13 +1788,6 @@
     <div class="dlg-body" id="dlgBody"></div>
   </dialog>
 
-  <div class="installbar" id="installBar" hidden>
-    <img src="icons/icon-192.png" alt="">
-    <p><b>Add to your home screen</b>Opens like an app and still works when campus wifi drops.</p>
-    <button class="go" id="installGo" type="button">Install</button>
-    <button class="no" id="installNo" type="button" aria-label="Not now">✕</button>
-  </div>
-
   <div class="toast" id="toast" role="status" hidden></div>
 
   <script>
@@ -1778,7 +1821,7 @@
     // ── building grouping ──────────────────────────────────────────────
     function place(code) {
       let m = code.match(/^(\d{2})([A-Z])-(\d+)L$/);
-      if (m) return { key: 'L' + m[1], label: 'Level ' + Number(m[1]), order: Number(m[1]), zone: 'Zone ' + m[2] };
+      if (m) return { key: 'L' + Number(m[1]), label: 'Level ' + Number(m[1]), order: Number(m[1]), zone: 'Zone ' + m[2] };
       m = code.match(/^AS([G12])-(\d+)L$/);
       if (m) return { key: 'AS' + m[1], label: 'AS block · ' + (m[1] === 'G' ? 'ground floor' : 'level ' + m[1]), order: 50 + (m[1] === 'G' ? 0 : Number(m[1])), zone: '' };
       m = code.match(/^AN([G12])-(\d+)L$/);
@@ -1908,7 +1951,8 @@
           const c = document.createElement('button');
           c.type = 'button'; c.className = 'chip';
           const openCount = DAYS.reduce((a, d) => a + SLOTS.filter(s => isFree(r, d, s)).length, 0);
-          c.innerHTML = '<b>' + r + '</b><span>' + openCount + ' free blocks this week</span>';
+          c.innerHTML = '<b>' + r + '</b><span>' + openCount + ' free blocks this week</span>'
+            + badgeFor(r);
           c.style.animationDelay = Math.min(tick++ * 24, 430) + 'ms';
           c.onclick = () => openRoom(r);
           wrap.appendChild(c);
@@ -1966,7 +2010,8 @@
       const total = DAYS.reduce((a, d) => a + SLOTS.filter(s => isFree(room, d, s)).length, 0);
       document.getElementById('dlgMeta').textContent = p.label + (p.zone ? ' · ' + p.zone : '') + ' · ' + total + ' of 18 blocks free';
 
-      let html = '<div class="dayrow head"><b></b><span>8–11</span><span>11–2</span><span>2–5</span></div>';
+      let html = '<div class="now-block" id="dlgNow"></div>';
+      html += '<div class="dayrow head"><b></b><span>8–11</span><span>11–2</span><span>2–5</span></div>';
       for (const d of DAYS) {
         html += '<div class="dayrow"><b>' + d + '</b>';
         for (const s of SLOTS) {
@@ -1982,6 +2027,7 @@
       document.getElementById('dlgBody').innerHTML = html;
       openRoomCode = room;
       syncURL();
+      paintReport(room);
       if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
     }
 
@@ -2354,6 +2400,172 @@
       return { hits, free: (b.e - b.s) - busy, block: b };
     }
 
+    // ── live check-in ──────────────────────────────────────────────────
+    // The routine says no class is booked. It cannot say the door is locked
+    // or that fifteen people got there first. This is students telling each
+    // other, and it expires fast because a 45-minute-old report is a guess.
+    //
+    // One worry shaped the design: people who find a lab PACKED have every
+    // reason to report it, and people who find one EMPTY have every reason to
+    // keep quiet. Left alone this fills up with bad news. So "seats free" is
+    // first, green, and the largest target, and a room with no report says
+    // "nobody has checked" rather than looking like a problem.
+    const STATES = [
+      { id: 'free', label: 'Seats free', short: 'seats free' },
+      { id: 'some', label: 'A few people in', short: 'a few in' },
+      { id: 'full', label: 'Packed', short: 'packed' },
+      { id: 'locked', label: 'Door locked', short: 'locked' }
+    ];
+    const STATE_LABEL = Object.fromEntries(STATES.map(x => [x.id, x.short]));
+    const LIVE_MAX_AGE = 75 * 60 * 1000;   // a report is dead after this
+    const LIVE_STALE = 40 * 60 * 1000;     // and looks tired after this
+    const MY_COOLDOWN = 15 * 60 * 1000;    // how often you may report one room
+    const LIVE_TTL = 3 * 60 * 1000;        // how long to reuse what we fetched
+
+    let live = {};          // room -> { s, t }
+    let liveAt = 0;
+    let myReports = {};
+    try { myReports = JSON.parse(localStorage.getItem('flf-reports') || '{}'); } catch (e) { }
+
+    function liveFor(room) {
+      const r = live[room];
+      if (!r || Date.now() - r.t > LIVE_MAX_AGE) return null;
+      return r;
+    }
+
+    // `short` is for the room chips, where the whole badge has to fit in a
+    // box about 120px wide
+    function ago(t, short) {
+      const m = Math.round((Date.now() - t) / 60000);
+      if (m < 1) return short ? 'now' : 'just now';
+      if (m < 60) return m + 'm' + (short ? '' : ' ago');
+      return Math.round(m / 60) + 'h' + (short ? '' : ' ago');
+    }
+
+    async function loadLive(force) {
+      if (!fbReady()) return;
+      if (!force && Date.now() - liveAt < LIVE_TTL) return;
+
+      const body = {
+        structuredQuery: {
+          from: [{ collectionId: col('live') }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: 't' }, op: 'GREATER_THAN_OR_EQUAL',
+              // only rooms someone has actually checked recently come back, so
+              // this reads a handful of rows rather than every room
+              value: { integerValue: String(Date.now() - LIVE_MAX_AGE) }
+            }
+          },
+          limit: 40
+        }
+      };
+
+      const res = await fetch(fsBase() + ':runQuery?key=' + STATS.key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('live read failed');
+
+      const next = {};
+      for (const row of await res.json()) {
+        if (!row.document) continue;
+        const name = row.document.name.split('/').pop();
+        const f = row.document.fields || {};
+        if (f.s && f.t && STATE_LABEL[f.s.stringValue]) {
+          next[name] = { s: f.s.stringValue, t: Number(f.t.integerValue) };
+        }
+      }
+      live = next;
+      liveAt = Date.now();
+    }
+
+    async function report(room, state) {
+      if (!fbReady()) return false;
+      const now = Date.now();
+      const url = fsBase() + '/' + col('live') + '/' + encodeURIComponent(room)
+        + '?key=' + STATS.key;
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            s: { stringValue: state },
+            t: { integerValue: String(now) },
+            aid: { stringValue: anonId() },
+            v: { stringValue: STATS.season }
+          }
+        })
+      });
+      if (res.ok) {
+        live[room] = { s: state, t: now };
+        myReports[room] = now;
+        try { localStorage.setItem('flf-reports', JSON.stringify(myReports)); } catch (e) { }
+        return true;
+      }
+      // the rules refuse a second report on the same room within five minutes,
+      // which is what stops one person steering every room
+      return false;
+    }
+
+    function badgeFor(room) {
+      const r = liveFor(room);
+      if (!r) return '';
+      const stale = Date.now() - r.t > LIVE_STALE;
+      return '<span class="livebadge s-' + r.s + (stale ? ' stale' : '') + '">'
+        + '<i></i><span>' + STATE_LABEL[r.s] + ' \u00b7 ' + ago(r.t, true) + '</span></span>';
+    }
+
+    function paintReport(room) {
+      const box = document.getElementById('dlgNow');
+      if (!box) return;
+      if (!fbReady()) { box.innerHTML = ''; return; }
+
+      const r = liveFor(room);
+      const mine = myReports[room] || 0;
+      const waiting = Date.now() - mine < MY_COOLDOWN;
+
+      let html = '<h4>Right now</h4>';
+      html += r
+        ? '<div class="latest s-' + r.s + '"><b>Someone said: ' + STATE_LABEL[r.s] + '</b>'
+          + '<em>' + ago(r.t) + '</em></div>'
+        : '<div class="latest">Nobody has checked this room recently.</div>';
+
+      html += '<div class="report">';
+      for (const st of STATES) {
+        html += '<button data-s="' + st.id + '"' + (waiting ? ' disabled' : '') + '>'
+          + st.label + '</button>';
+      }
+      html += '</div>';
+      html += '<p class="report-note">' + (waiting
+        ? 'Thanks \u2014 you can update this room again in a little while.'
+        : 'Walked past? Tell the next person. Reports fade after about an hour.')
+        + '</p>';
+
+      box.innerHTML = html;
+      box.querySelectorAll('.report button').forEach(b => {
+        b.onclick = async () => {
+          box.querySelectorAll('.report button').forEach(x => x.disabled = true);
+          const ok = await report(room, b.dataset.s).catch(() => false);
+          if (!ok) {
+            toast('Someone just updated this room \u2014 try again shortly');
+            paintReport(room);
+            return;
+          }
+          track('checkin');
+          paintReport(room);
+          paint();
+          toast('Thanks \u2014 that helps');
+        };
+      });
+    }
+
+    function fsBase() {
+      return 'https://firestore.googleapis.com/v1/projects/' + STATS.project
+        + '/databases/(default)/documents';
+    }
+
     // ── shareable links ────────────────────────────────────────────────
     // The address bar always reflects what you are looking at, so you can copy
     // it straight out. Share also offers the phone's share sheet where it exists.
@@ -2419,11 +2631,26 @@
       toastTimer = setTimeout(() => { el.hidden = true; }, 2000);
     }
 
+    // What gets written into a shared message. The routine and what someone
+    // just reported can disagree, and the report is the newer fact, so say both.
     function describe(room) {
       const when = DAYFULL[day] + ' ' + SLOTLABEL[slot];
-      if (room) return room + ' on ' + when + (isFree(room, day, slot) ? ' \u2014 free' : ' \u2014 booked');
-      const n = ROOMS.filter(r => isFree(r, day, slot)).length;
-      return n + ' lab' + (n === 1 ? '' : 's') + ' free on ' + when;
+
+      if (room) {
+        const onRoutine = isFree(room, day, slot);
+        const r = liveFor(room);
+        let text = room + ' on ' + when + ' \u2014 '
+          + (onRoutine ? 'no class booked' : 'has a class');
+        if (r) {
+          text += ', but someone said ' + STATE_LABEL[r.s] + ' ' + ago(r.t);
+        }
+        return text;
+      }
+
+      const free = ROOMS.filter(r => isFree(r, day, slot));
+      const checked = free.filter(r => liveFor(r)).length;
+      return free.length + ' lab' + (free.length === 1 ? '' : 's') + ' free on ' + when
+        + (checked ? ' (' + checked + ' checked recently)' : '');
     }
 
     async function doShare(url, text, fallbackBox) {
@@ -2432,7 +2659,9 @@
         catch (e) { if (e && e.name === 'AbortError') return; }
       }
       try {
-        await navigator.clipboard.writeText(url);
+        // copy the same thing the share sheet would send, so a pasted link
+        // carries the context instead of arriving bare
+        await navigator.clipboard.writeText(text + '\n' + url);
         toast('Link copied');
         return;
       } catch (e) { }
@@ -2544,16 +2773,22 @@
     // name, no student id, no course list. See stats.py to read the numbers.
     const STATS = {
       project: 'free-lab-finder',   // your Firebase project id
-      key: '',                      // your Firebase Web API key - paste it here to switch counting on
+      key: 'AIzaSyCUy6P4A-riZYNeBT9keSpPSnzI5jmbDgM',                      // your Firebase Web API key - paste it here to switch Firebase on
       season: 'fall2026'            // bumped each semester by update_routine.py
     };
+
+    // Anything that is not the real site writes to a separate set of
+    // collections, so your testing never mixes into what students see.
+    const LIVE_HOST = /(^|\.)free-lab-finder\.web\.app$|(^|\.)free-lab-finder\.firebaseapp\.com$/;
+    const IS_LIVE = LIVE_HOST.test(location.hostname);
+    const fbReady = () => Boolean(STATS.project && STATS.key);
+    const col = name => IS_LIVE ? name : name + '_test';
 
     const SESSION_MS = 30 * 60 * 1000;
 
     function statsOff() {
-      if (!STATS.project || !STATS.key) return true;              // not configured yet
-      const h = location.hostname;
-      if (!h || h === 'localhost' || h === '127.0.0.1' || h === '[::1]') return true;  // your own testing
+      if (!fbReady()) return true;   // not configured yet
+      if (!IS_LIVE) return true;     // your own testing is never counted
       try { if (localStorage.getItem('flf-nostats') === '1') return true; } catch (e) { }
       return false;
     }
@@ -2608,7 +2843,7 @@
 
     function track(name) {
       try { if (statsOff()) return; } catch (e) { return; }
-      fsWrite('events', {
+      fsWrite(col('events'), {
         t: { stringValue: name },
         day: { stringValue: dhakaDay() },
         aid: { stringValue: anonId() },
@@ -2630,7 +2865,7 @@
       let known = false;
       try { known = localStorage.getItem('flf-known') === '1'; } catch (e) { }
       if (!known) {
-        fsWrite('students', {
+        fsWrite(col('students'), {
           first: { stringValue: dhakaDay() },
           v: { stringValue: STATS.season }
         }, anonId());
@@ -2663,10 +2898,26 @@
     // ── offline support ────────────────────────────────────────────────
     // Registration is best-effort. On file:// or anywhere sw.js is missing it
     // simply does nothing and the page carries on as a normal website.
+    const DEV_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => { });
-      });
+      if (DEV_HOST) {
+        // A cached page while you are developing just hides your own changes.
+        // Tear down anything a previous visit left behind, so a plain refresh
+        // is always enough.
+        navigator.serviceWorker.getRegistrations()
+          .then(list => list.forEach(r => r.unregister()))
+          .catch(() => { });
+        if (window.caches) {
+          caches.keys()
+            .then(keys => keys.filter(k => k.startsWith('flf-')).forEach(k => caches.delete(k)))
+            .catch(() => { });
+        }
+      } else {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').catch(() => { });
+        });
+      }
     }
 
     const offlineTag = document.getElementById('offlineTag');
@@ -2679,41 +2930,16 @@
     window.addEventListener('offline', showNetwork);
     showNetwork();
 
-    // ── install prompt ─────────────────────────────────────────────────
-    const installBar = document.getElementById('installBar');
-    let installEvent = null;
-
-    function hideInstall(remember) {
-      installBar.hidden = true;
-      if (remember) { try { localStorage.setItem('flf-install-dismissed', '1'); } catch (e) { } }
-    }
-
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault();
-      installEvent = e;
-      let dismissed = false;
-      try { dismissed = localStorage.getItem('flf-install-dismissed') === '1'; } catch (e2) { }
-      // give them a moment to look around before asking for anything
-      if (!dismissed) setTimeout(() => { if (installEvent) installBar.hidden = false; }, 9000);
-    });
-
-    document.getElementById('installGo').onclick = async () => {
-      hideInstall(false);
-      if (!installEvent) return;
-      installEvent.prompt();
-      try { await installEvent.userChoice; } catch (e) { }
-      installEvent = null;
-    };
-    document.getElementById('installNo').onclick = () => hideInstall(true);
-    window.addEventListener('appinstalled', () => {
-      installEvent = null;
-      hideInstall(true);
-      track('install');
-    });
-
     document.getElementById('nowBtn').onclick = goNow;
     paintMine();
     if (!applyURL()) goNow();
+
+    // live reports arrive after the page is already usable
+    if (fbReady()) {
+      loadLive()
+        .then(() => { paint(); if (openRoomCode) paintReport(openRoomCode); })
+        .catch(() => { });
+    }
   </script>
 </body>
 

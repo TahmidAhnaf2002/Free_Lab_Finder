@@ -43,8 +43,7 @@ def read(name):
 
 
 # ─────────────────────────────── files ────────────────────────────────
-for name in ["index.html", "sw.js", "manifest.webmanifest",
-             "firebase.json", "firestore.rules"]:
+for name in ["index.html", "sw.js", "firebase.json", "firestore.rules"]:
     if not (ROOT / name).exists():
         bad(f"missing file: {name}")
 
@@ -124,23 +123,6 @@ for url in re.findall(r"'(\./[^']+)'", sw.split("const SHELL")[-1].split("];")[0
     if not (ROOT / url[2:]).exists():
         bad(f"sw.js precaches {url}, which does not exist")
 
-mtext = read("manifest.webmanifest")
-if mtext:
-    try:
-        manifest = json.loads(mtext)
-        icons = manifest.get("icons", [])
-        if not any(i.get("purpose") == "maskable" for i in icons):
-            warn("no maskable icon - Android will letterbox the app icon")
-        for icon in icons:
-            if not (ROOT / icon["src"]).exists():
-                bad(f"manifest lists {icon['src']}, which does not exist")
-        if manifest.get("start_url") != "./":
-            warn(f"start_url is {manifest.get('start_url')!r}, expected './'")
-    except json.JSONDecodeError as e:
-        bad(f"manifest.webmanifest is not valid JSON: {e}")
-
-if 'rel="manifest"' not in html:
-    bad("index.html does not link the manifest")
 if "serviceWorker" not in html:
     bad("index.html does not register the service worker")
 
@@ -183,6 +165,34 @@ else:
         bad(f"the API key does not look like a Firebase web key: {key.group(1)[:8]}...")
     else:
         note(f"usage counting is on, project {project.group(1)}")
+
+rules = read("firestore.rules") or ""
+
+page_states = set(re.findall(r"\{ id: '([a-z]+)', label: '[^']*', short:", html))
+m_states = re.search(r"d\.s in \[(.*?)\]", rules, re.S)
+rule_states = set(re.findall(r"'([a-z]+)'", m_states.group(1))) if m_states else set()
+if page_states and rule_states:
+    if page_states != rule_states:
+        bad(f"check-in states disagree. only in page: {sorted(page_states - rule_states)}, "
+            f"only in rules: {sorted(rule_states - page_states)}")
+    else:
+        note(f"{len(page_states)} check-in states, page and rules agree")
+elif page_states or rule_states:
+    bad("check-in states found in only one of index.html and firestore.rules")
+
+m_room = re.search(r"room\.matches\('([^']+)'\)", rules)
+if m_room and data:
+    pat = re.compile(m_room.group(1))
+    rejected = [r for r in data["rooms"] if not pat.match(r)]
+    if rejected:
+        bad(f"{len(rejected)} room(s) would be rejected by the rules: {rejected[:3]}")
+
+if "request.time.toMillis()" not in rules:
+    warn("the rules do not check report timestamps against the server clock")
+
+for coll in ["events", "students", "live"]:
+    if f"match /{coll}_test/" not in rules:
+        warn(f"no {coll}_test rule - local testing would write into live data")
 
 size = len(html.encode()) / 1024
 note(f"index.html is {size:.0f} KB")
